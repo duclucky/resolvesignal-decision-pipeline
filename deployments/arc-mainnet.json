@@ -1,0 +1,17 @@
+{
+  "network": "Arc Mainnet",
+  "chain_id": 5042,
+  "deployment_id": "resolvesignal-circle-developer-v3",
+  "factory": "0xB2b41f3e45AEe1Da3D8756bd087277f1194bf3C7",
+  "implementation": "0xdd02Ec2A86CF8b05081bE88DE4C190d0980D067F",
+  "operator": "0xCd71c60Eb4E0C180CeBB8359606E402255d9C407",
+  "treasury": "0x8B26F57Ac95619887B7281573CF10764B95869CD",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "domain_name": "ExactEscrowFactory",
+  "domain_version": "3",
+  "deployment_transaction": "0x2aaa6bd0c8a6e5455948e6c44346e7cf4f9f60c71c903aea70289100d90e9724",
+  "deployment_block": 24828301,
+  "factory_runtime_hash": "0x810f2d5ff8788a4d9ef58ad3446369c7e635deeacd0b6fd120f7287bbd633cd9",
+  "implementation_runtime_hash": "0x5fd2e57b61c6e8d6c3fd89bf350468869ed75478cafff8ede3d91383516a4ffb",
+  "status": "active"
+}

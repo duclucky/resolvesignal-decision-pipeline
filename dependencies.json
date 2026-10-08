@@ -1,0 +1,10 @@
+{
+  "openzeppelin-contracts": {
+    "repository": "https://github.com/OpenZeppelin/openzeppelin-contracts",
+    "tag": "v5.4.0",
+    "commit": "c64a1edb67b6e3f4a15cca8909c9482ad33a02b0"
+  },
+  "solidity": "0.8.30",
+  "evm_version": "cancun",
+  "optimizer_runs": 200
+}
