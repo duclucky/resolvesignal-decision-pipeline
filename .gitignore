@@ -17,3 +17,4 @@ __pycache__/
 *.p12
 *.log
 .DS_Store
+node_modules/
