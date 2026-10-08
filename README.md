@@ -1,52 +1,194 @@
-# ResolveSignal Arc x402 Escrow
+# ResolveSignal Decision Pipeline
 
-[![contracts](https://github.com/duclucky/resolvesignal-arc-escrow/actions/workflows/ci.yml/badge.svg)](https://github.com/duclucky/resolvesignal-arc-escrow/actions/workflows/ci.yml)
+[![pipeline](https://github.com/duclucky/resolvesignal-decision-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/duclucky/resolvesignal-decision-pipeline/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Arc Mainnet](https://img.shields.io/badge/Arc%20Mainnet-5042-4e56b5)](https://explorer.arc.io/address/0xB2b41f3e45AEe1Da3D8756bd087277f1194bf3C7)
 
-A reusable Arc primitive for pay-per-call APIs: one deterministic USDC vault per
-signed request, compatible with the recipient model used by standard x402 v2
-`exact` payments.
+ResolveSignal is a fail-closed, pay-per-call decision pipeline for autonomous
+agents. A caller submits current evidence, an explicit goal, authority,
+constraints, and executable capabilities. The pipeline returns exactly one
+typed conditional next action, or fails the service and takes the refund path.
 
-The contracts are extracted into this standalone repository so Arc builders can
-fork, test, and integrate the payment lifecycle without adopting the
-[ResolveSignal](https://resolvesignal.com) application or its backend.
+This repository contains the complete reusable workflow behind the product:
 
-## The problem
+1. publish a machine-readable form;
+2. reject blank, incomplete, stale, contradictory, or unbound input;
+3. compile caller declarations into a deterministic decision contract;
+4. ask Jev whether that contract is semantically sufficient **before payment**;
+5. issue one x402 exact quote bound to one request and payer;
+6. verify the payment and isolate the request from concurrent calls;
+7. ask GPT-5.4 for a typed `DecisionIR`, never free-form executable prose;
+8. check action, evidence, constraints, and goal alignment;
+9. bind the accepted review to exact source hashes in trusted code;
+10. render the result from declared IDs and parameters;
+11. release the fee only after the response body is delivered;
+12. refund paid quality, timeout, or delivery failures; and
+13. erase request and result context after the terminal receipt is recorded.
 
-A normal x402 transfer proves that a buyer paid a recipient. A pay-per-call
-service also needs a bounded lifecycle when processing fails after payment:
-which request was paid, where the fee may go, when refund becomes available,
-and how late or duplicate transfers are recovered.
+The repository does not include credentials, customer payloads, production
+databases, signer material, internal hostnames, or private infrastructure state.
 
-This repository adds that missing settlement boundary while preserving the
-standard buyer payment flow.
+## Why this is more than an LLM wrapper
 
-## Reusable primitives
+Jev and GPT-5.4 have different bounded roles. They do not vote on arbitrary
+prose and the server does not average their confidence scores.
 
-- **Signed EIP-712 quotes** bind `callId`, payer, terms commitment, price, quote
-  expiry, and delivery deadline.
-- **CREATE2 minimal-proxy vaults** give every call an isolated and predictable
-  payment recipient.
-- **Standard x402 exact compatibility** lets the buyer authorize a normal USDC
-  transfer to the advertised vault; no contract-specific buyer signature is
-  required.
-- **Atomic terminal states** send the exact fee to treasury after validated
-  delivery or return funds to the original payer.
-- **Permissionless timeout refunds** prevent operator downtime from trapping a
-  funded call indefinitely.
-- **Late-payment and surplus recovery** can only return value to the payer bound
-  by the signed quote.
-- **Privacy-preserving commitments** keep business input and output offchain;
-  only hashes, addresses, amounts, and deadlines are public.
-- **EOA and ERC-1271 operators** support ordinary and smart-account signing
-  policies.
+- **Jev admission:** decides whether a structurally valid request is
+  semantically sufficient for this service. A rejection occurs before payment.
+- **GPT-5.4 planner:** selects one action and returns only typed references to
+  caller-declared evidence, goals, constraints, and capabilities.
+- **GPT-5.4 checker:** evaluates four fixed relationships: action fit, evidence
+  relevance, constraint alignment, and goal alignment.
+- **Trusted compiler:** rejects invented or incomplete references and binds each
+  supported relationship to exact source hashes.
+- **Deterministic renderer:** builds the public result from checked declarations.
+  Model-authored prose never becomes an executable instruction.
 
-Compared with general Arc commerce and peer-to-peer payment examples, this repo
-focuses on the failure boundary between an HTTP 402 payment and an asynchronous
-offchain computation.
+Both models remain probabilistic. Passing the gates means the result conforms to
+the declared contract; it is not a guarantee that the caller's evidence is true
+or that a future operation will succeed.
 
-## Arc Mainnet deployment
+## End-to-end lifecycle
+
+```mermaid
+sequenceDiagram
+    participant A as Calling agent
+    participant I as Intake/compiler
+    participant J as Jev
+    participant P as x402/Arc vault
+    participant G as GPT-5.4
+    participant C as Trusted checker
+
+    A->>I: Complete typed form + payer + idempotency key
+    I->>I: Schema, bindings, freshness, admissible actions
+    I->>J: Semantic admission
+    alt incomplete, contradictory, or unsupported
+        J-->>A: Reject before payment
+    else admitted
+        I-->>A: HTTP 402 exact quote for per-call vault
+        A->>P: One USDC payment
+        P-->>I: Verified receipt bound to call and payer
+        I->>G: Typed planning request
+        G-->>I: DecisionIR
+        I->>G: Four-claim semantic review
+        G-->>C: Typed verdict
+        C->>C: Validate IDs, coverage, targets, hashes
+        alt any paid gate fails or response is not delivered
+            C->>P: Refund original payer
+            C-->>A: Service failed; no draft returned
+        else result body delivered
+            C-->>A: One conditional next action
+            C->>P: Complete exact fee to treasury
+        end
+        C->>C: Purge request and result context
+    end
+```
+
+## Public modules
+
+| Path | Responsibility |
+| --- | --- |
+| `resolvesignal_pipeline/contracts.py` | Strict request, capability, response-case, IR, and semantic-review contracts |
+| `resolvesignal_pipeline/intake.py` | Canonicalization and input commitment |
+| `resolvesignal_pipeline/compiler.py` | Candidate filtering, guard evaluation, IR validation, source binding, review verification |
+| `resolvesignal_pipeline/providers.py` | Reference Jev SystemOne and OpenAI Responses adapters |
+| `resolvesignal_pipeline/pipeline.py` | Pre-payment admission and paid decision boundaries |
+| `resolvesignal_pipeline/render.py` | Deterministic public result construction |
+| `resolvesignal_pipeline/workflow.py` | Idempotency, bounded concurrency, payment, delivery, refund, terminal cleanup |
+| `src/` | Arc x402 per-call escrow contracts |
+| `abi/` and `deployments/` | Public contract interfaces and Arc Mainnet manifest |
+| `python_tests/` and `test/` | Pipeline, workflow, Solidity, fuzz, regression, and invariant coverage |
+
+## Run the decision core
+
+Requirements: Python 3.12+.
+
+```bash
+git clone --recurse-submodules https://github.com/duclucky/resolvesignal-decision-pipeline.git
+cd resolvesignal-decision-pipeline
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[models,dev]"
+python -m pytest python_tests -q
+```
+
+Windows activation:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Copy `.env.example` into your secret manager or local ignored `.env`. Never put
+API keys or signer material in source control.
+
+```python
+import os
+
+from resolvesignal_pipeline import (
+    DecisionPipeline,
+    JevAdmissionClient,
+    OpenAIDecisionClient,
+)
+
+pipeline = DecisionPipeline(
+    jev=JevAdmissionClient(api_key=os.environ["TYPESAFE_API_KEY"]),
+    gpt=OpenAIDecisionClient(
+        api_key=os.environ["OPENAI_API_KEY"],
+        model=os.getenv("OPENAI_DECISION_MODEL", "gpt-5.4"),
+    ),
+)
+
+# Free gates, including Jev admission, occur here.
+prepared = await pipeline.prepare(request_payload)
+
+# In a paid service, issue and verify the x402 quote between these calls.
+result = await pipeline.decide(prepared, call_id="call_example")
+```
+
+Use `ResolveSignalWorkflow` when you also need quote, payment, delivery,
+completion/refund, idempotency, concurrency, and terminal cleanup. Its
+`PaymentAdapter` interface keeps the decision system independent of wallet or
+facilitator custody.
+
+## Input contract
+
+Every field is required. “No data” is valid only when declared explicitly with
+`status: none` or `status: unknown` and a non-blank explanation. Empty strings,
+omitted keys, duplicate IDs, unknown references, and unbound response cases are
+rejected before any paid work.
+
+The caller declares:
+
+- objective target and measurable success criteria;
+- current observed state and timezone-aware observation time;
+- evidence with stable IDs, sources, and target bindings;
+- authority and constraints;
+- permitted and forbidden action IDs;
+- executable capabilities with fixed arguments;
+- response cases that distinguish operation completion from goal resolution;
+- prior attempts, facts, and locale.
+
+The service does not fetch arbitrary URLs, infer missing capabilities, ask for
+more information after payment, or execute the selected business action.
+
+## Failure and refund contract
+
+| Failure point | Customer charged? | Service outcome |
+| --- | --- | --- |
+| Schema or binding validation | No | Reject with field errors |
+| No admissible automatic action | No | Reject |
+| Jev unavailable or rejects | No | Reject; no quote |
+| Payment cannot be verified | No confirmed charge | Do not process |
+| GPT-5.4 planner unavailable/invalid | Yes | Withhold draft and refund |
+| Semantic checker unsupported/uncertain | Yes | Withhold draft and refund |
+| Trusted validation or source binding fails | Yes | Withhold result and refund |
+| Processing deadline expires | Yes | Refund |
+| Response body is not delivered | Yes | Refund |
+| Response body is delivered | Yes | Release exact fee |
+
+No paid model failure is reported as a completed service.
+
+## Arc Mainnet settlement
 
 | Component | Address |
 | --- | --- |
@@ -55,91 +197,44 @@ offchain computation.
 | Deployment transaction | [`0x2aaa6bd0c8a6e5455948e6c44346e7cf4f9f60c71c903aea70289100d90e9724`](https://explorer.arc.io/tx/0x2aaa6bd0c8a6e5455948e6c44346e7cf4f9f60c71c903aea70289100d90e9724) |
 | USDC | `0x3600000000000000000000000000000000000000` |
 
-Network: Arc Mainnet, chain ID `5042`. The complete public manifest is in
-[`deployments/arc-mainnet.json`](deployments/arc-mainnet.json).
+Network: Arc Mainnet, chain ID `5042`. Each accepted call receives one
+deterministic CREATE2 vault. Standard x402 v2 `exact` clients pay that vault
+without a contract-specific buyer signature. The exact fee is completed to
+treasury or the vault refunds the bound payer.
 
-This deployment powers ResolveSignal's production payment path. That statement
-describes deployment status, not third-party adoption or user traction.
-
-## Lifecycle
-
-```mermaid
-sequenceDiagram
-    participant API as Seller API
-    participant F as Factory
-    participant B as x402 buyer
-    participant V as Per-call vault
-    participant T as Treasury
-
-    API->>F: createVault(operator-signed quote)
-    F-->>API: deterministic vault address
-    API-->>B: HTTP 402 exact, payTo = vault
-    B->>V: standard USDC authorization/transfer
-    API->>API: verify receipt and compute result
-    alt result delivered and accepted
-        API->>V: complete(resultCommitment)
-        V->>T: exact service fee
-    else processing or delivery fails
-        API->>V: refund()
-        V->>B: full vault balance
-    end
-```
-
-After the deadline, anyone can trigger the same payer-bound refund path.
-
-## Build and test
-
-Requirements: Foundry and Git.
+## Verification
 
 ```bash
-git clone --recurse-submodules https://github.com/duclucky/resolvesignal-arc-escrow.git
-cd resolvesignal-arc-escrow
+python -m pytest python_tests -q
 forge fmt --check
 forge build --sizes
 forge test -vvv
 ```
 
-Solidity `0.8.30`, OpenZeppelin `5.4.0`, optimizer `200`, EVM target `cancun`.
-The current suite passes **53 tests** across unit, fuzz, regression, and
-stateful invariant coverage. The invariant campaign executes 4,096 calls over
-128 runs with zero reverts. Local tests use a mock token at Arc's USDC address
-and do not fully emulate Arc's native-USDC precompile or issuer controls.
+The current public suite contains 18 Python pipeline/workflow tests and 53
+Solidity tests. Solidity coverage includes unit, fuzz, regression, and a
+stateful invariant campaign of 4,096 calls across 128 runs with zero reverts.
 
-## Integrate
+## Documentation
 
-Read [`docs/INTEGRATION.md`](docs/INTEGRATION.md) for the seller and buyer flow,
-receipt checks, and recovery rules. The high-level design is in
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and security assumptions are in
-[`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md).
-
-The deployment script reads only public role addresses from environment
-variables. Configure Foundry broadcasting with an encrypted keystore or managed
-signer; never pass or commit a private key.
-
-```bash
-cp .env.example .env
-forge script script/DeployArcEscrow.s.sol:DeployArcEscrow \
-  --rpc-url "$ARC_RPC_URL" \
-  --sender "$DEPLOYER_ADDRESS"
-```
-
-Review the simulation and constructor roles before adding your environment's
-explicit broadcast option.
+- [`docs/DECISION-PIPELINE.md`](docs/DECISION-PIPELINE.md): stage contracts and model boundaries
+- [`docs/PAYMENT-LIFECYCLE.md`](docs/PAYMENT-LIFECYCLE.md): x402 quote, delivery, completion, and refund
+- [`docs/PRIVACY.md`](docs/PRIVACY.md): retention and sensitive-data boundary
+- [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md): trust assumptions and abuse cases
+- [`docs/INTEGRATION.md`](docs/INTEGRATION.md): embedding the pipeline and payment adapter
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): planned SDK, adapter, verification, and audit work
 
 ## Security status
 
-The code has automated adversarial and invariant coverage but has **not received
-an independent professional audit**. Do not treat this repository, its tests, or
-the production deployment as a warranty. Read [SECURITY.md](SECURITY.md) before
-using real funds.
+The public code has automated adversarial, concurrency, fuzz, and invariant
+coverage. It has **not received an independent professional audit**. Model
+review is probabilistic, caller declarations are not independently verified,
+and the service does not authorize or execute the returned action. Read
+[`SECURITY.md`](SECURITY.md) before using real funds.
 
-## Roadmap
+## Live product and license
 
-The public roadmap covers client libraries, reference seller adapters, refund
-watching, reproducible deployment verification, and an independent audit. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md). It intentionally makes no claim of current
-third-party mainnet users.
-
-## License
+The active deployment powers [ResolveSignal](https://resolvesignal.com). This is
+a deployment statement, not a claim of third-party adoption or user traction.
 
 MIT. See [LICENSE](LICENSE).

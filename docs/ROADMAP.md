@@ -2,23 +2,25 @@
 
 ## Shipped
 
-- Deterministic per-call vaults for standard x402 exact USDC recipients.
-- EIP-712 quote binding with EOA and ERC-1271 operator support.
-- Exact fee completion, full refund, late-payment recovery, and native dust
-  handling for Arc's shared native/ERC-20 USDC pool.
-- Unit, fuzz, regression, and stateful invariant coverage.
-- Arc Mainnet deployment used by the live ResolveSignal service.
+- Strict machine-readable intake with explicit absence and cross-reference rules.
+- Deterministic action admission and canonical input commitments.
+- Jev semantic admission before payment.
+- GPT-5.4 typed planning and four-claim semantic review.
+- Trusted source-hash binding and deterministic result rendering.
+- Idempotent, concurrent pay-per-call workflow with delivery-aware completion,
+  refund on paid failure, and terminal context purge.
+- Standard x402 exact-compatible Arc escrow contracts and Mainnet deployment.
+- Python pipeline/workflow tests plus Solidity unit, fuzz, regression, and
+  stateful invariant coverage.
 
 ## Next
 
-1. Publish small TypeScript and Python packages for quote construction, receipt
-   verification, and refund reconciliation.
-2. Add a reference HTTP 402 seller adapter and end-to-end tests against standard
-   x402 clients.
-3. Add a lightweight event indexer and permissionless refund watcher.
-4. Commission an independent professional audit and publish the report.
-5. Add deployment verification automation and reproducible bytecode attestations.
-6. Collect feedback from independent Arc builders and document production
-   integrations without exposing customer payloads.
+1. Publish versioned Python and TypeScript packages.
+2. Add reference FastAPI and Node x402 seller adapters.
+3. Add a standard client conformance suite and replay corpus.
+4. Add an independent refund watcher and deployment verification automation.
+5. Commission independent audits for the Solidity and decision/compiler layers.
+6. Collect feedback from Arc builders and document verified integrations without
+   exposing customer payloads.
 
-Roadmap items are plans, not commitments or claims of current functionality.
+Roadmap items are plans, not claims of current functionality or adoption.

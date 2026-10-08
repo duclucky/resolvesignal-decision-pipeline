@@ -1,11 +1,13 @@
 # Contributing
 
-Issues and pull requests are welcome. Keep changes focused on reusable Arc
-payment infrastructure.
+Issues and pull requests are welcome. Keep changes focused on the reusable
+decision pipeline, pay-per-call workflow, or Arc settlement adapter.
 
 Before opening a pull request:
 
 ```bash
+python -m pip install -e ".[dev]"
+python -m pytest python_tests -q
 forge fmt --check
 forge build --sizes
 forge test -vvv

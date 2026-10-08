@@ -1,0 +1,110 @@
+{
+  "objective": {
+    "target_id": "invoice-1042",
+    "statement": "Move invoice-1042 from pending to a confirmed paid state.",
+    "success_contract": {
+      "requires_final_state": true,
+      "criteria": [
+        {
+          "id": "paid",
+          "description": "The matching invoice is confirmed paid.",
+          "allow_authoritative_absence": false
+        }
+      ]
+    }
+  },
+  "current_state": {
+    "status": "provided",
+    "content": "Invoice invoice-1042 is pending after the first capture attempt."
+  },
+  "observations": [
+    {
+      "id": "invoice_state",
+      "target_id": "invoice-1042",
+      "status": "provided",
+      "value": {"state": "pending"},
+      "explanation": "Current state returned by the billing system.",
+      "source": "billing-api"
+    },
+    {
+      "id": "gateway_ready",
+      "target_id": "invoice-1042",
+      "status": "provided",
+      "value": true,
+      "explanation": "The payment gateway health check succeeded.",
+      "source": "gateway-health"
+    }
+  ],
+  "policy": {
+    "authority": {
+      "status": "provided",
+      "content": "The caller may retry this invoice once for at most USD 25."
+    },
+    "constraints": {
+      "status": "provided",
+      "content": "Do not modify any invoice other than invoice-1042."
+    },
+    "allowed_action_ids": ["retry_capture"],
+    "forbidden_action_ids": [],
+    "conditions": [
+      {
+        "id": "gateway_available",
+        "observation_id": "gateway_ready",
+        "operator": "eq",
+        "expected": true,
+        "action_ids": ["retry_capture"]
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "retry_capture",
+      "description": "Retry capture for the declared invoice and amount.",
+      "effect": "state_change",
+      "requires_approval": false,
+      "target_id": "invoice-1042",
+      "cost_fact_id": null,
+      "arguments": [
+        {"name": "invoice_id", "value": "invoice-1042"},
+        {"name": "max_amount", "value": "25.00"}
+      ],
+      "response_observations": [
+        {
+          "id": "capture_result",
+          "kind": "problem_state",
+          "description": "Authoritative capture result for the matching invoice.",
+          "cases": [
+            {
+              "id": "paid_final",
+              "description": "The matching invoice is confirmed paid.",
+              "evidence": "usable",
+              "target": "matched",
+              "finality": "final",
+              "operation_completed": true,
+              "satisfies": ["paid"]
+            },
+            {
+              "id": "still_pending",
+              "description": "The matching invoice remains pending.",
+              "evidence": "usable",
+              "target": "matched",
+              "finality": "non_final",
+              "operation_completed": false,
+              "satisfies": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "facts": {
+    "status": "none",
+    "explanation": "No numerical comparison is needed for this request."
+  },
+  "previous_attempts": {
+    "status": "provided",
+    "content": "One capture attempt returned a pending state."
+  },
+  "observed_at": "2026-10-08T12:00:00Z",
+  "locale": "en"
+}

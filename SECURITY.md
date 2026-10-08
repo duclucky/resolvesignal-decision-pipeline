@@ -2,22 +2,24 @@
 
 ## Scope
 
-Security reports are accepted for `ExactEscrowFactory`, `ExactPaymentVault`, the
-deployment manifest, and the documented x402 integration pattern in this
-repository.
+Reports are accepted for the intake contracts, compiler, model boundaries,
+source-binding checks, deterministic renderer, workflow state machine,
+`ExactEscrowFactory`, `ExactPaymentVault`, deployment manifest, and documented
+x402 integration pattern.
 
-Do not test against the production deployment with funds you cannot afford to
-lose. Do not send USDC directly to the factory or implementation. Only a vault
-bound to a signed quote is a valid payment destination.
+Do not test the production deployment with funds or customer data. Do not send
+USDC to the factory or implementation; only a vault bound to a verified signed
+quote is a payment recipient.
 
 ## Reporting
 
 Report vulnerabilities privately to **Support@resolvesignal.com**. Include the
-affected commit, impact, reproduction steps, and a minimal proof of concept.
-Do not open a public issue for an unpatched vulnerability.
+affected commit, impact, reproduction steps, and a minimal proof of concept. Do
+not open a public issue for an unpatched vulnerability and never send secrets or
+real customer payloads.
 
 ## Status
 
-The contracts have unit, fuzz, regression, and stateful invariant coverage.
-They have not received an independent professional audit. This repository is
-reference infrastructure and is provided without warranty under the MIT License.
+The code has structural, semantic-gate, concurrency, refund, unit, fuzz,
+regression, and stateful invariant coverage. It has not received an independent
+professional audit and is provided without warranty under the MIT License.

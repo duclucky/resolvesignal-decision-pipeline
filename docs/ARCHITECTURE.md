@@ -1,38 +1,55 @@
 # Architecture
 
-## Components
+ResolveSignal separates declarations, probabilistic model judgment, trusted
+validation, payment, and delivery. A stage cannot silently repair the output of
+an earlier stage.
+
+## Boundaries
+
+1. **Intake** owns the public request schema and explicit-absence rules.
+2. **Compiler** canonicalizes the request, evaluates declared guards, and finds
+   actions that are permitted, automatic, target-matched, and verifiable.
+3. **Jev admission** decides whether the compiled contract is semantically
+   sufficient. This stage runs before a quote is issued.
+4. **Payment adapter** owns quote binding, payment verification, completion, and
+   refund. The decision core does not know how wallet custody is implemented.
+5. **GPT-5.4 planner** returns only a small `DecisionIR` containing declared IDs.
+6. **GPT-5.4 checker** reviews four fixed relationships and cannot add sources.
+7. **Trusted validator** checks all IDs and coverage, then binds accepted claims
+   to SHA-256 hashes of the exact sources used during review.
+8. **Renderer** revalidates those bindings and constructs the result without
+   using model-authored executable prose.
+9. **Workflow** coordinates idempotency, per-call locks, bounded parallel work,
+   response delivery, terminal settlement, and context deletion.
+
+## Important invariants
+
+- No quote is created before deterministic and Jev admission pass.
+- A paid call receives one analysis attempt; retries never create a second
+  automatic payment.
+- Unknown IDs, missing goal coverage, target mismatch, or unsupported semantic
+  checks withhold the entire draft.
+- Operation completion and real-world goal resolution remain separate.
+- A result is not fee-complete until delivery is acknowledged.
+- Every paid failure follows refund handling and never returns a partial draft.
+- Terminal receipts contain no input payload or result body.
+- Each call has its own context and lock; the concurrency semaphore limits only
+  aggregate model work.
+
+## Onchain settlement
 
 `ExactEscrowFactory` verifies an operator-signed EIP-712 quote and deploys one
-deterministic minimal-proxy vault for its `callId`. A quote binds the payer,
-amount, opaque terms commitment, quote expiry, and delivery deadline.
+deterministic minimal-proxy vault for its `callId`. The quote binds payer,
+amount, terms commitment, quote expiry, and delivery deadline.
 
-`ExactPaymentVault` is immutable after initialization. It accepts one exact
-USDC payment destination and reaches one terminal state:
+`ExactPaymentVault` has one terminal outcome:
 
 ```text
-                         operator + result commitment
+                         validated delivered result
                        ┌──────────────────────────────> Completed ──> treasury
 signed quote ─> Open ──┤
                        └──────────────────────────────> Refunded ───> payer
-                         operator early, anyone after deadline
+                         paid failure or timeout
 ```
 
-Late or excess ERC-20 USDC can only be returned to the quote's fixed payer.
-Sub-atomic native-USDC dust is handled separately because Arc exposes one USDC
-pool through native and ERC-20 interfaces with different decimal views.
-
-## Trust boundaries
-
-- The service controls the operator and decides whether a delivered result meets
-  its offchain policy. `complete` is an operator attestation, not an onchain proof
-  of result quality.
-- The payer reviews the quote and authorizes the standard x402 exact payment.
-- The contract binds value flow and deadlines. It never receives raw request or
-  response content.
-- After `completeBy`, refund is permissionless and always targets the bound payer.
-
-## Replay isolation
-
-The quote digest uses EIP-712 domain separation with chain ID and factory
-address. A `callId` maps to one digest and one CREATE2 clone. Reusing the same
-`callId` with different terms reverts.
+The contract never receives the raw request or result.

@@ -2,30 +2,41 @@
 
 ## Protected properties
 
-- A signed call creates at most one vault.
-- The quote fixes payer, amount, terms commitment, and deadlines.
-- Only the operator can complete a paid call before the deadline.
-- Completion transfers only the exact fee to the fixed treasury.
-- Refunds and surplus always return to the fixed payer.
-- A terminal state cannot be changed or repeated.
-- Cross-chain and cross-factory quote replay is rejected.
-- The implementation contract cannot be initialized or taken over.
+- Missing or blank input never reaches payment.
+- Jev rejection or unavailability never creates a customer charge.
+- Models cannot introduce undeclared tools, parameters, goals, or sources.
+- A model cannot bypass deterministic candidate filtering or policy guards.
+- Semantic review covers exactly four required claims and is bound to source
+  hashes owned by trusted code.
+- Invalid paid output is withheld and routed to refund.
+- One idempotency key and payer map to one call.
+- Concurrent calls retain separate contexts, results, and payment recipients.
+- A terminal receipt contains no input or result body.
+- Onchain completion transfers only the exact fee to treasury; refund and
+  surplus return only to the payer.
 
-## Covered adversarial cases
+## Covered cases
 
-The tests cover unauthorized completion, early refund, repeated terminal calls,
-tampered quotes, cross-domain replay, counterfactual deposits, expired recovery,
-short-credit tokens, blocked recipients, transfer failure, reentrancy attempts,
-late payments, surplus, native dust, and multi-vault conservation.
+Tests cover blank and explicit-absence handling, invalid cross-references,
+guard rejection, Jev rejection, invented action IDs, uncertain semantic claims,
+concurrent orders, idempotent submissions, delivery failure, paid quality
+failure, context purge, unauthorized settlement, replay, reentrancy, late
+payments, surplus, blocked recipients, and multi-vault conservation.
+
+## Trust assumptions
+
+- Caller declarations may be false; the service validates consistency, not the
+  truth of external evidence.
+- Jev and GPT-5.4 are probabilistic and can share errors.
+- The operator controls model/provider selection and the settlement signer.
+- The caller remains responsible for current authority, target identity, and
+  execution of the returned action.
+- Circle/USDC issuer controls, the Arc network, RPCs, facilitators, and managed
+  signer services remain external dependencies.
 
 ## Out of scope
 
-- Correctness or quality of the offchain service result.
-- Compromise of the operator signer or deployment environment.
-- USDC issuer pause or blocklist policy.
-- Frontend, RPC, facilitator, and wallet security.
+- Guaranteeing a real-world business outcome.
+- Executing the recommended action for the caller.
+- Compromise of a model provider, signer, host, wallet, or secret manager.
 - Legal, sanctions, tax, or regulatory compliance.
-
-Use a managed signer or hardware-backed key, monitor every open vault, keep gas
-available for settlement, and maintain an independent permissionless-refund
-watcher before operating in production.

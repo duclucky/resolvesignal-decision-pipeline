@@ -1,6 +1,14 @@
 out/
 cache/
 broadcast/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
 .env
 .env.*
 !.env.example
