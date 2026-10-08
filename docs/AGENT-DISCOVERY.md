@@ -24,7 +24,7 @@ servers:
 externalDocs:
   url: https://api.example.com/docs
 paths:
-  /v2/resolve:
+  /v2/requests/{call_id}/pay:
     post:
       x-payment-info:
         price:
@@ -50,29 +50,24 @@ the specification.
 
 ## Runtime proof
 
-An unpaid `POST /v2/resolve` must return status `402` and a base64-encoded
+An unpaid `POST /v2/requests/{call_id}/pay` must return status `402` and a base64-encoded
 `PAYMENT-REQUIRED` header whose decoded x402 v2 object contains a non-empty
 `accepts[]`. Each accepted requirement declares the amount, network, asset, and
-seller destination. A successful paid response returns status `200` and the
-middleware's `PAYMENT-RESPONSE` receipt header.
+seller destination. A successful paid response returns status `200` with a
+payment receipt and the checked decision result.
 
-The reference adapter configures the official middleware to accept only Arc
-Mainnet (`eip155:5042`). Its unpaid challenge must contain exactly that network.
+The runtime accepts standard x402 v2 `exact` on Arc Mainnet (`eip155:5042`).
+Each admitted request receives an initialized per-call escrow vault, which is
+the seller destination in that call's challenge.
 
 ## Live ResolveSignal reference
 
-- Paid route: `POST https://resolvesignal.com/v2/resolve`
+- Quote intake: `POST https://resolvesignal.com/v2/requests`
+- Paid resource: `POST https://resolvesignal.com/v2/requests/{call_id}/pay`
 - OpenAPI document: <https://resolvesignal.com/openapi.json>
 - Human and agent integration guide: <https://resolvesignal.com/integrate>
 - Price: 0.06 USDC per call
 - Accepted network: Arc Mainnet (`eip155:5042`)
 
 The live challenge and OpenAPI document are authoritative. Do not infer extra
-networks from the Circle Gateway product's general chain support.
-
-## Reference adapter
-
-See [`adapters/circle-gateway/`](../adapters/circle-gateway/) for a minimal
-seller process. It exposes only `/livez` and the paid `/v2/resolve` route, calls
-an authenticated decision service to prepare a checked result before
-settlement, and contains no deployment address or secret.
+networks or payment rails from unrelated Circle products.

@@ -97,7 +97,6 @@ sequenceDiagram
 | `resolvesignal_pipeline/workflow.py` | Idempotency, bounded concurrency, payment, delivery, refund, terminal cleanup |
 | `src/` | Arc x402 per-call escrow contracts |
 | `abi/` and `deployments/` | Public contract interfaces and Arc Mainnet manifest |
-| `adapters/circle-gateway/` | Reference Arc Mainnet x402 seller adapter using Circle Gateway |
 | `python_tests/` and `test/` | Pipeline, workflow, Solidity, fuzz, regression, and invariant coverage |
 
 ## Run the decision core
@@ -174,10 +173,7 @@ more information after payment, or execute the selected business action.
 
 ## Arc escrow failure and refund contract
 
-The table below describes the per-call Arc vault workflow. The optional Circle
-Gateway rail prepares and validates the result before settlement; if preparation
-fails, Gateway settlement is aborted and no service fee is settled, so there is
-no refund transaction for that failed attempt.
+The table below describes the per-call Arc vault workflow.
 
 | Failure point | Customer charged? | Service outcome |
 | --- | --- | --- |
@@ -208,23 +204,6 @@ deterministic CREATE2 vault. Standard x402 v2 `exact` clients pay that vault
 without a contract-specific buyer signature. The exact fee is completed to
 treasury or the vault refunds the bound payer.
 
-## Optional Circle Gateway rail
-
-[`adapters/circle-gateway/`](adapters/circle-gateway/) is a separate reference
-seller boundary for agents that hold USDC in Circle Gateway. It uses the
-official `@circle-fin/x402-batching` middleware, publishes a standard HTTP 402
-challenge, prepares the checked decision before settlement, and restricts the
-payment requirement to Arc Mainnet. The seller address, upstream URL,
-shared token, and price come only from environment variables.
-
-This rail has different recovery semantics from the Arc escrow above. Gateway
-settles only after the decision has been prepared successfully. A preparation
-failure aborts settlement instead of charging first and creating a refund. It
-does not provide the repository's delivery-aware vault release/refund state machine. Integrators
-must select the payment adapter whose settlement guarantees match their use
-case. See [`docs/AGENT-DISCOVERY.md`](docs/AGENT-DISCOVERY.md) for OpenAPI and
-runtime discovery requirements.
-
 ## Verification
 
 ```bash
@@ -245,7 +224,7 @@ stateful invariant campaign of 4,096 calls across 128 runs with zero reverts.
 - [`docs/PRIVACY.md`](docs/PRIVACY.md): retention and sensitive-data boundary
 - [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md): trust assumptions and abuse cases
 - [`docs/INTEGRATION.md`](docs/INTEGRATION.md): embedding the pipeline and payment adapter
-- [`docs/AGENT-DISCOVERY.md`](docs/AGENT-DISCOVERY.md): x402 OpenAPI discovery and Circle Gateway adapter
+- [`docs/AGENT-DISCOVERY.md`](docs/AGENT-DISCOVERY.md): x402 OpenAPI discovery and runtime challenge requirements
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): planned SDK, adapter, verification, and audit work
 
 ## Security status
@@ -261,7 +240,8 @@ and the service does not authorize or execute the returned action. Read
 The active deployment powers [ResolveSignal](https://resolvesignal.com). This is
 a deployment statement, not a claim of third-party adoption or user traction.
 
-- Live paid endpoint: `POST https://resolvesignal.com/v2/resolve`
+- Quote intake: `POST https://resolvesignal.com/v2/requests`
+- Paid resource: `POST https://resolvesignal.com/v2/requests/{call_id}/pay`
 - OpenAPI: <https://resolvesignal.com/openapi.json>
 - Integration guide: <https://resolvesignal.com/integrate>
 - Price and network: 0.06 USDC per call on Arc Mainnet (`eip155:5042`)
