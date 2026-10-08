@@ -18,6 +18,9 @@ info:
     Submit a complete typed decision request when an agent must choose one
     caller-authorized action from current evidence. The service returns one
     checked action with fixed parameters and measurable success criteria.
+servers:
+  - url: https://api.example.com
+    description: Public API
 externalDocs:
   url: https://api.example.com/docs
 paths:
@@ -55,6 +58,17 @@ middleware's `PAYMENT-RESPONSE` receipt header.
 
 The reference adapter configures the official middleware to accept only Arc
 Mainnet (`eip155:5042`). Its unpaid challenge must contain exactly that network.
+
+## Live ResolveSignal reference
+
+- Paid route: `POST https://resolvesignal.com/v2/resolve`
+- OpenAPI document: <https://resolvesignal.com/openapi.json>
+- Human and agent integration guide: <https://resolvesignal.com/integrate>
+- Price: 0.06 USDC per call
+- Accepted network: Arc Mainnet (`eip155:5042`)
+
+The live challenge and OpenAPI document are authoritative. Do not infer extra
+networks from the Circle Gateway product's general chain support.
 
 ## Reference adapter
 

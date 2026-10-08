@@ -172,7 +172,12 @@ The caller declares:
 The service does not fetch arbitrary URLs, infer missing capabilities, ask for
 more information after payment, or execute the selected business action.
 
-## Failure and refund contract
+## Arc escrow failure and refund contract
+
+The table below describes the per-call Arc vault workflow. The optional Circle
+Gateway rail prepares and validates the result before settlement; if preparation
+fails, Gateway settlement is aborted and no service fee is settled, so there is
+no refund transaction for that failed attempt.
 
 | Failure point | Customer charged? | Service outcome |
 | --- | --- | --- |
@@ -213,8 +218,9 @@ payment requirement to Arc Mainnet. The seller address, upstream URL,
 shared token, and price come only from environment variables.
 
 This rail has different recovery semantics from the Arc escrow above. Gateway
-settles after the decision has been prepared successfully; it does not provide
-the repository's delivery-aware vault release/refund state machine. Integrators
+settles only after the decision has been prepared successfully. A preparation
+failure aborts settlement instead of charging first and creating a refund. It
+does not provide the repository's delivery-aware vault release/refund state machine. Integrators
 must select the payment adapter whose settlement guarantees match their use
 case. See [`docs/AGENT-DISCOVERY.md`](docs/AGENT-DISCOVERY.md) for OpenAPI and
 runtime discovery requirements.
@@ -254,5 +260,10 @@ and the service does not authorize or execute the returned action. Read
 
 The active deployment powers [ResolveSignal](https://resolvesignal.com). This is
 a deployment statement, not a claim of third-party adoption or user traction.
+
+- Live paid endpoint: `POST https://resolvesignal.com/v2/resolve`
+- OpenAPI: <https://resolvesignal.com/openapi.json>
+- Integration guide: <https://resolvesignal.com/integrate>
+- Price and network: 0.06 USDC per call on Arc Mainnet (`eip155:5042`)
 
 MIT. See [LICENSE](LICENSE).

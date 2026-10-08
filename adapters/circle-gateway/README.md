@@ -7,8 +7,9 @@ accepts only Arc Mainnet (`eip155:5042`).
 
 The adapter prepares a checked decision through an authenticated upstream call
 inside `onBeforeSettle`. If preparation fails, settlement is aborted and no
-partial model output is returned. Successful responses include the middleware
-payment receipt fields.
+service fee is settled; this is distinct from charging and later refunding the
+caller. No partial model output is returned. Successful responses include the
+middleware payment receipt fields.
 
 ## Configure
 
